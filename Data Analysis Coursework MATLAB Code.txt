@@ -1,0 +1,37 @@
+clear point = get_tap_test_data; 
+
+
+load('blade1_data.mat') dt = point(1).time(2)-point(1).time(1); 
+Fs = 1/dt;
+figure for location = 1:10 point(location).meanInput = mean(point(location).input(:,:),2);
+point(location).meanOutput = mean(point(location).output(:,:),2);
+signalLength = length(point(location).meanOutput(:));
+
+
+freqVect1 = (Fs/signalLength)*(0:signalLength-1);
+freqVect1 = [freqVect1(1:end/2)];
+freqVectT = transpose(freqVect1);
+inputFft = fft(point(location).meanInput(:)./signalLength);
+inputFft = [inputFft(1) ; 2*inputFft(2:end/2)];
+outputFft = fft(point(location).meanOutput(:)./signalLength);
+outputFft = [outputFft(1) ; 2*outputFft(2:end/2)];
+
+
+frf = outputFft./inputFft;
+frfA(:,location) = frf;
+frfAT = transpose(frfA);
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+semilogy(freqVect1, abs(frf));
+
+hold on
+	xlim([0,700]);
+end
+
+[ wn ] = find_natural_frequencies( frfA, freqVect1, 5 );
+wnT = transpose(wn);
+[ zeta ] = find_damping_ratios( frfA, freqVect1, wn );
+[Phi1] = find_mode_shapes(frfA,freqVect1,wn,zeta,'orthonormal')
+[ H ] = reconstructFRF( freqVectT, wnT, zeta, Phi1 );
+semilogy(freqVect1,abs(H));
+[MAC11] = modal_assurance_criterion(Phi1, Phi1);
